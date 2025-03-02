@@ -71,9 +71,11 @@ void handle_rtnl_message(struct nlmsghdr *nlh) {
                 printf("rta_type:%x ", rta->rta_type);
                 struct in6_addr *addr = (struct in6_addr *)RTA_DATA(rta);
                 char addr_str[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, addr, addr_str, INET6_ADDRSTRLEN);
-
-                printf("Interface: %s, IPv6 Address: %s\n", ifname, addr_str);
+                if ((addr->s6_addr[0] & 0xE0) == 0x20){
+                    inet_ntop(AF_INET6, addr, addr_str, INET6_ADDRSTRLEN);
+                    //printf("Interface: %s, IPv6 Address: %s\n", ifname, addr_str);
+                    printf("%s\n", addr_str);
+                }
             }
         }
     }
