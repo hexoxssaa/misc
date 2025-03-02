@@ -11,6 +11,8 @@
 
 #define BUFFER_SIZE 8192
 
+int mngtmp = 0;
+
 static inline __u32 rta_getattr_u32(const struct rtattr *rta)
 {
 	return *(__u32 *)RTA_DATA(rta);
@@ -61,14 +63,20 @@ void handle_rtnl_message(struct nlmsghdr *nlh) {
 
 
     // 只处理IPv6地址
-    if (ifa->ifa_family == AF_INET6 && ifa_flags & IFA_F_MANAGETEMPADDR) {
+    int cmprslt = 0;
+    if (mngtmp == 1){
+        cmprslt = ifa->ifa_family == AF_INET6 && ifa_flags & IFA_F_MANAGETEMPADDR;
+    }else{
+        cmprslt = ifa->ifa_family == AF_INET6;
+    }
+    if (cmprslt == 1) {
         char ifname[IFNAMSIZ];
         if_indextoname(ifa->ifa_index, ifname);
 
         // 遍历消息中的属性
         for (; RTA_OK(rta, rtl); rta = RTA_NEXT(rta, rtl)) {
             if (rta->rta_type == IFA_LOCAL || rta->rta_type == IFA_ADDRESS) { 
-                printf("rta_type:%x ", rta->rta_type);
+                //printf("rta_type:%x ", rta->rta_type);
                 struct in6_addr *addr = (struct in6_addr *)RTA_DATA(rta);
                 char addr_str[INET6_ADDRSTRLEN];
                 if ((addr->s6_addr[0] & 0xE0) == 0x20){
@@ -81,12 +89,21 @@ void handle_rtnl_message(struct nlmsghdr *nlh) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     int sockfd;
     struct sockaddr_nl nladdr;
     struct nlmsghdr *nlh;
     struct ifaddrmsg *ifa;
     char buffer[BUFFER_SIZE];
+
+    int i;
+    // 遍历所有命令行参数
+    for (i = 1; i < argc; i++) {
+        // 检查当前参数是否为 -m
+        if (strcmp(argv[i], "-m") == 0) {
+            mngtmp = 1;
+        }
+    }
 
     // 创建Netlink套接字
     sockfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
